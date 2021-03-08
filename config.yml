@@ -1,0 +1,26 @@
+flashlight:
+  executable: /root/flashlight/build/bin/asr/fl_asr_tutorial_inference_ctc
+  accoustic_model: /data/am_transformer_ctc_stride3_letters_300Mparams.bin
+  language_model: /data/lm_common_crawl_large_4gram_prun0-0-5_200kvocab.bin
+  tokens: /data/tokens.txt
+  lexicon: /data/lexicon.txt
+  beam_size: 100
+  beam_size_token: 10
+  beam_threshold: 100
+  language_model_weight: 3.0
+  word_score: 0.0
+
+warmup:
+  audio: /data/hello.wav
+  ground_truth: "hello"
+  repeat: 3
+
+activity:
+  threshold: -23dB
+  timeout: 300ms
+  buffer_duration: 10s
+  gain_smooth: 0.97
+  context_prefix: 150ms
+
+http:
+  listen: ":8080"

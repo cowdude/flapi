@@ -1,0 +1,94 @@
+<html>
+
+<head>
+    <style>
+        html,
+        body {
+            background-color: #333;
+            color: #eee;
+        }
+
+        * {
+            font-family: monospace;
+            font-size: small;
+        }
+
+        .row {
+            width: auto;
+            padding: 0.125em;
+            color: #ccc;
+        }
+
+        .row+.row {
+            margin-top: 0.125em;
+        }
+
+        .row.comment {
+            color: #999;
+        }
+
+        .row.tx {
+            font-weight: bold;
+        }
+
+        .row.tx+.row.rx,
+        .row.rx+.row.tx {
+            border-top: 1px solid gray;
+        }
+
+        .string {
+            color: lawngreen;
+        }
+
+        .number {
+            color: orange;
+        }
+
+        .boolean {
+            color: deepskyblue;
+        }
+
+        .null {
+            color: white;
+        }
+
+        .key {
+            color: white;
+            font-weight: bold;
+        }
+
+        #bar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            padding: 1em;
+            background: #444;
+            min-width: 200px;
+        }
+
+        #bar>* {
+            display: block;
+        }
+
+        #bar>*+* {
+            margin-top: 1em;
+        }
+
+        button {
+            font-size: large;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="bar">
+        <button id="hitme" disabled>Toggle record</button>
+        <div>
+            <input id="log_bin_msg" type="checkbox" checked /><label for="log_bin_msg">Log BIN messages</label>
+        </div>
+    </div>
+    <script src="main.js"></script>
+</body>
+
+</html>

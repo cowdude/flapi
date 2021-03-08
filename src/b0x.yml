@@ -1,0 +1,9 @@
+pkg: static
+dest: "./static/"
+fmt: true
+tags: ""
+compression:
+  compress: true
+custom:
+- base: www
+  files: [www/*]
