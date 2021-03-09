@@ -21,6 +21,14 @@ run:
 		--runtime=nvidia \
 		flapi server -v
 
+run-profile:
+	docker run -it \
+		-v /mnt/ml/flashlight:/data \
+		-p 8855:8080 \
+		--ipc=host \
+		--runtime=nvidia \
+		flapi server -cpuprofile /data/cpu.pprof
+
 run-production:
 	docker run -it \
 		-v /mnt/ml/flashlight:/data \

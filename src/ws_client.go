@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,15 +15,12 @@ import (
 )
 
 type Client struct {
-	GUID           string
-	Conn           *websocket.Conn
-	Request        *http.Request
-	ReceivingAudio bool
-
-	Audio struct {
-		In    *audio.ChanReader
-		InfoC chan audio.WAVEInfo
-
+	GUID    string
+	Conn    *websocket.Conn
+	Request *http.Request
+	Audio   struct {
+		In       *audio.ChanReader
+		InfoC    chan audio.WAVEInfo
 		Activity chan audio.Activity
 	}
 }
@@ -35,13 +31,6 @@ const (
 	EStatusChanged ClientEvent = "status_changed"
 	EPrediction                = "prediction"
 )
-
-type ResponsePayload struct {
-	Request string      `json:"request"`
-	Success bool        `json:"success"`
-	Result  interface{} `json:"result,omitempty"`
-	Message string      `json:"message,omitempty"`
-}
 
 type EventPayload struct {
 	Event   ClientEvent `json:"event"`
@@ -102,14 +91,21 @@ func NewClient(conn *websocket.Conn, r *http.Request) (c *Client) {
 }
 
 func (c *Client) handleBinary(data []byte) (err error) {
-	if !c.ReceivingAudio {
-		return errors.New("got binary data but was not receiving audio")
+	log.WithField("bytes", len(data)).Trace("Recv binary message")
+	select {
+	case <-asrReady:
+		if _, err := c.Audio.In.Write(data); err != nil { //shadowing intentional, dont care.
+			log.Warnf("Failed to buffer audio: %v", err) //shortWrite
+		}
+		return
+	default:
+		c.SendEvent(EventPayload{
+			Event:   "error",
+			Result:  false,
+			Message: "ASR still warming up",
+		})
+		return
 	}
-	log.WithField("bytes", len(data)).Debug("Recv binary message")
-	if _, err := c.Audio.In.Write(data); err != nil { //shadowing intentional, dont care.
-		log.Warnf("Failed to buffer audio: %v", err) //shortWrite
-	}
-	return
 }
 
 func (c *Client) predict(counter *uint, format audio.WAVEInfo, data []byte) (pred Prediction, err error) {

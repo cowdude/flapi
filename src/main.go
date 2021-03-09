@@ -6,8 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime"
+	"runtime/pprof"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cowdude/flapi/src/static"
@@ -16,6 +19,8 @@ import (
 var asr *ASRRunner
 var verbose = flag.Bool("v", false, "enable debug logging")
 var asrReady = make(chan struct{})
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+var profileDuration = flag.Duration("profile", time.Minute*3, "profiling duration")
 
 func warmup() {
 	defer close(asrReady)
@@ -73,6 +78,23 @@ func init() {
 }
 
 func main() {
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		go func() {
+			defer f.Close()
+			log.Error("Waiting for ASR to become ready before profiling")
+			<-asrReady
+			log.WithField("duration", *profileDuration).Error("Starting CPU profile")
+			pprof.StartCPUProfile(f)
+			time.Sleep(*profileDuration)
+			log.Error("Stopping CPU profile")
+			pprof.StopCPUProfile()
+		}()
+	}
+
 	asr = NewRunner()
 	defer asr.Close()
 

@@ -1,5 +1,7 @@
 package audio
 
+import "io"
+
 type ChanReader struct {
 	v  chan []byte
 	at []byte
@@ -10,19 +12,22 @@ func NewChanReader() *ChanReader {
 }
 
 func (buf *ChanReader) Read(dst []byte) (n int, err error) {
-	for n == 0 {
-		if len(buf.at) == 0 {
-			buf.at = <-buf.v
+	if len(buf.at) == 0 {
+		buf.at = <-buf.v
+		if buf.at == nil {
+			return 0, io.EOF
 		}
-		n = copy(dst, buf.at)
-		buf.at = buf.at[n:]
 	}
+	n = copy(dst, buf.at)
+	buf.at = buf.at[n:]
 	return
 }
 
 func (buf *ChanReader) Write(src []byte) (n int, err error) {
-	buf.v <- src
-	n = len(src)
+	if len(src) != 0 {
+		buf.v <- src
+		n = len(src)
+	}
 	return
 }
 
