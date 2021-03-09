@@ -10,8 +10,8 @@ src: .PHONY
 bin: src
 	go build -o bin/server ./src
 
-docker-image: bin Dockerfile
-	docker build -t flapi .
+docker-image: Dockerfile
+	docker build -t flapi:dev .
 
 run:
 	docker run -it \

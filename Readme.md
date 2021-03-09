@@ -8,15 +8,16 @@ on top of [Flashlight](https://github.com/facebookresearch/flashlight)'s
 
 ## Build requirements
 
-- Linux host machine
-
-- docker
-
-- nvidia runtime for docker (technically optional, recommended)
-
 - golang SDK >= 1.13.7
 
-- git, make
+---
+
+## Runtime requirements
+
+- Linux host machine, x86_64 (TODO: fix author's laziness to properly deal with endianess)
+- docker
+- nvidia runtime for docker (TODO: Dockerfile for CPU-only image)
+- ffmpeg
 
 ---
 
@@ -28,8 +29,8 @@ go get -u github.com/cowdude/flapi/...
 cd "$GOPATH/src/github.com/cowdude/flapi"
 
 # build the server and the docker image (cold builds take a long, long time)
-# Try to proceed to the next step as you wait, which also takes a while
-make docker-image
+# Try proceeding to the next step as you wait, which will also take a while
+docker build -t flapi:dev .
 ```
 
 ---
@@ -64,13 +65,14 @@ HOST_PORT=8080
 ls -lh "$HOST_DATA"
 echo API endpoint: http://localhost:$HOST_PORT
 
-# run the API. Fingers crossed.
-docker run -it \
+# run the API
+IMAGE_TAG=latest # or `dev` if you followed the previous steps
+docker run \
   -v "$HOST_DATA:/data" \
   -p "$HOST_PORT:8080" \
   --ipc=host \
   --runtime=nvidia \
-  flapi server
+  flapi:$IMAGE_TAG
 ```
 
 ---
