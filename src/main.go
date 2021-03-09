@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cowdude/flapi/src/static"
+	log "github.com/sirupsen/logrus"
 )
 
 var asr *ASRRunner

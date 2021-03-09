@@ -16,7 +16,7 @@ import (
 
 	"github.com/glycerine/rbuf"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/go-audio/wav"
 )

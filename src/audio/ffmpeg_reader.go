@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type EncoderFormat string

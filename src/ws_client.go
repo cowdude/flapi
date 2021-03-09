@@ -9,7 +9,7 @@ import (
 	"path"
 	"sync/atomic"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/cowdude/flapi/src/audio"
 	"github.com/gorilla/websocket"
 )
