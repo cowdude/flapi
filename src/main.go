@@ -1,8 +1,7 @@
-//go:generate go run github.com/UnnoTed/fileb0x b0x.yml
-
 package main
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cowdude/flapi/src/static"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,6 +19,9 @@ var verbose = flag.Bool("v", false, "enable debug logging")
 var asrReady = make(chan struct{})
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var profileDuration = flag.Duration("profile", time.Minute*3, "profiling duration")
+
+//go:embed index.html main.js
+var www embed.FS
 
 func warmup() {
 	defer close(asrReady)
@@ -104,7 +105,7 @@ func main() {
 	go warmup()
 
 	http.HandleFunc("/v1/ws", handleWS)
-	http.Handle("/", http.FileServer(static.HTTP))
+	http.Handle("/", http.FileServer(http.FS(www)))
 	log.Printf("http listening on %v", Config.HTTP.Listen)
 	log.Fatal(http.ListenAndServe(Config.HTTP.Listen, nil))
 }

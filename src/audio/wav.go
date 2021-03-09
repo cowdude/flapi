@@ -17,8 +17,6 @@ import (
 	"github.com/glycerine/rbuf"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/go-audio/wav"
 )
 
 type Gain float64
@@ -27,10 +25,6 @@ func Decibels(dB float64) Gain { return Gain(math.Pow(10, dB/10)) }
 
 func (gain Gain) Decibels() float64 { return 10 * math.Log10(float64(gain)) }
 func (gain Gain) String() string    { return fmt.Sprintf("%.3g [%.0fdB]", gain, gain.Decibels()) }
-
-type WAVDecoder struct {
-	d *wav.Decoder
-}
 
 type str4 [4]byte
 
