@@ -175,19 +175,36 @@ Also see the [official flasr tutorial](https://github.com/facebookresearch/flash
 
 ---
 
-## API protocol
+## WS API protocol
 
-> **TODO: STUB**
+> **IMPORTANT**: While the server was made to support concurrent users, I haven't tested the current code
+> in such use case, and I highly doubt that it will work as expected.
 
-Have a look at the websocket demo for now. It prints out the websocket transcription.
+```json
+// new connection begins
+// ...
 
-Websocket endpoint: `ws://localhost:$HOST_PORT/v1/ws`
+// server sends text:
+{ "event": "status_changed", "result": false, "message": "..." }
 
-You can feed anything that ffmpeg accepts as input audio stream. Make sure to include the
-format headers.
+// status_changed is false => wait for next event
+// ...
 
-While the server was made to support concurrent users, I haven't tested the current code
-in such use case, and I highly doubt that it will work as expected.
+// server sends text:
+{ "event": "status_changed", "result": true, "message": "..." }
+
+// client can now write audio data in a sequence of binary messages
+// status_changed cannot become false anymore. That easy.
+```
+
+- The server always sends JSON-encoded text messages ;
+- The server expects to receive only binary messages ;
+- The binary messages contain the ordered audio stream, such as the content an MP3-encoded file ;
+- The client is allowed to stop/resume sending frames at any point after `status_changed` becomes `true` ;
+- Sending aberrant volumes of data over an extended period of time will cause the server to fall behind
+  and discard oldest audio data ;
+- You can feed it anything that ffmpeg accepts as input audio stream ;
+- Make sure to include the stream and codec format headers whenever possible.
 
 ---
 
