@@ -6,17 +6,42 @@ on top of [Flashlight](https://github.com/facebookresearch/flashlight)'s
 
 ---
 
-## Build requirements
+## Quick start
+
+```sh
+# prepare a persistent directory to store the model files.
+# You'll need about 10GB, ideally on your fastest SSD for dev.
+HOST_DATA="$HOME/flapi-data"
+
+mkdir -p "$HOST_DATA"
+git clone https://github.com/cowdude/flapi
+cp flapi/data/hello.wav "$HOST_DATA/"
+flapi/download_models.sh "$HOST_DATA"
+docker run \
+    -v "$HOST_DATA:/data" \
+    --ipc=host \
+    --runtime=nvidia \
+    cowdude/flapi:latest
+
+# Demo websocket client: http://localhost:8080
+# websocket endpoint:    ws://localhost:8080/v1/ws
+# Demo app documentation below
+```
+
+---
+
+## Build requirements (golang service)
 
 - golang SDK >= 1.13.7
 
 ---
 
-## Runtime requirements
+## Runtime requirements (golang service)
 
 - Linux host machine, x86_64 (TODO: fix author's laziness to properly deal with endianess)
 - docker
 - nvidia runtime for docker (TODO: Dockerfile for CPU-only image)
+- flashlight binaries, apps included
 - ffmpeg
 
 ---
@@ -147,7 +172,7 @@ while I hopefully update this documentation.
 
 See `/config.yml` inside the container, or simply `config.yml` at the root of this repository.
 
-Also see the [official tutorial](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr/tutorial) for testing different models, finetuning, etc. There is also [the official documentation](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr) for the boldest.
+Also see the [official flasr tutorial](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr/tutorial) for testing different models, finetuning, etc. There is also [the official flashlight documentation](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr) for the boldest.
 
 ---
 
