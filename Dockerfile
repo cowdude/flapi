@@ -12,7 +12,8 @@ WORKDIR /go/src/github.com/cowdude/flapi/src
 
 COPY src .
 
-RUN go build -o /server
+RUN go mod download && \
+    go build -o /server
 
 FROM flml/flashlight:cuda-latest@sha256:42ccb7981aa4edaa1d8881ce9711583d046d00db2d80049bf7114e1441417cf9
 
