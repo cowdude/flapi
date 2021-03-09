@@ -21,7 +21,7 @@ docker run \
     -v "$HOST_DATA:/data" \
     --ipc=host \
     --runtime=nvidia \
-    cowdude/flapi:latest
+    cowdude/flapi
 
 # Demo websocket client: http://localhost:8080
 # websocket endpoint:    ws://localhost:8080/v1/ws
@@ -55,7 +55,7 @@ cd "$GOPATH/src/github.com/cowdude/flapi"
 
 # build the server and the docker image (cold builds take a long, long time)
 # Try proceeding to the next step as you wait, which will also take a while
-docker build -t flapi:dev .
+docker build -t flapi .
 ```
 
 ---
@@ -91,13 +91,12 @@ ls -lh "$HOST_DATA"
 echo API endpoint: http://localhost:$HOST_PORT
 
 # run the API
-IMAGE_TAG=latest # or `dev` if you followed the previous steps
 docker run \
   -v "$HOST_DATA:/data" \
   -p "$HOST_PORT:8080" \
   --ipc=host \
   --runtime=nvidia \
-  flapi:$IMAGE_TAG
+  flapi
 ```
 
 ---
