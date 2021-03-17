@@ -13,26 +13,30 @@ on top of [Flashlight](https://github.com/facebookresearch/flashlight)'s
 # You'll need about 10GB, ideally on your fastest SSD for dev.
 HOST_DATA="$HOME/flapi-data"
 
+# define the port on which you want to expose the HTTP API
+HOST_PORT=8080
+
 mkdir -p "$HOST_DATA"
 git clone https://github.com/cowdude/flapi
 cp flapi/data/hello.wav "$HOST_DATA/"
 flapi/download_models.sh "$HOST_DATA"
 docker run \
     -v "$HOST_DATA:/data" \
+    -p "$HOST_PORT:8080" \
     --ipc=host \
     --runtime=nvidia \
     cowdude/flapi
 
-# Demo websocket client: http://localhost:8080
-# websocket endpoint:    ws://localhost:8080/v1/ws
-# Demo app documentation below
+echo "Demo websocket client: http://localhost:$HOST_PORT"
+echo "websocket endpoint:    ws://localhost:$HOST_PORT/v1/ws"
+# Demo app (and API protocol) documentation below
 ```
 
 ---
 
 ## Build requirements (golang service)
 
-- golang SDK >= 1.13.7
+- golang SDK >= 1.16.0 (required for `//go:embed <3`)
 
 ---
 
@@ -115,8 +119,10 @@ docker run \
 1. You should get something similar to this output:
 
 ```ruby
-# NOTE: first line is the most recent entry ;
-#  => start reading at the very last line (websocket open)
+# NOTES: first line is the most recent entry ;
+#  => start reading at the end of this code section
+# - incoming text message (JSON-encoded) from server: < TXT; TEXT_MESSAGE_JSON_PAYLOAD
+# - outgoing audio data blob from client: > BIN; BROWSER_AUDIO_MIMETYPE | BLOB_SIZE bytes
 
 < TXT; {"event":"prediction","result":{"input_file":"/tmp/2.wav","text":"this is a test"}}
 # recorder drained
@@ -167,11 +173,60 @@ while I hopefully update this documentation.
 
 ## Server and Model Configuration
 
-> **TODO: STUB**
+Service configuration is written in YAML:
 
-See `/config.yml` inside the container, or simply `config.yml` at the root of this repository.
+```yaml
+# flashlight ASR command-line options, mainly for models tuning. See links below.
+flashlight:
+  executable: /root/flashlight/build/bin/asr/fl_asr_tutorial_inference_ctc
+  accoustic_model: /data/am_transformer_ctc_stride3_letters_300Mparams.bin
+  language_model: /data/lm_common_crawl_large_4gram_prun0-0-5_200kvocab.bin
+  tokens: /data/tokens.txt
+  lexicon: /data/lexicon.txt
+  beam_size: 100
+  beam_size_token: 10
+  beam_threshold: 100
+  language_model_weight: 3.0
+  word_score: 0.0
 
-Also see the [official flasr tutorial](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr/tutorial) for testing different models, finetuning, etc. There is also [the official flashlight documentation](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr) for the boldest.
+# the service runs a smoke-test given an audio file and expected output at startup.
+# used to force GPU/CPU resource allocations on FLASR
+warmup:
+  audio: /data/hello.wav
+  ground_truth: 'hello'
+  repeat: 3
+
+# the activity section lets you tweak how the service locates speech activity in the
+# internal WAV/PCM audio stream
+activity:
+  # `threshold`: anything below this audio gain threshold is treated as silent.
+  # lower values make the service more responsive to low-volume inputs, but
+  # will also capture noise, and usually yield poor/empty predictions.
+  # higher values make the system more resilient to background noise, at the cost of
+  # potentially missing the start of some speech segments.
+  threshold: -23dB
+  # `timeout`: minimum silence duration between words/sentences.
+  # lower if you want more predictions per second, or lower end-to-end response time
+  # higher values tend to work best with a high flashlight.language_model_weight.
+  timeout: 300ms
+  # `buffer_duration`: audio ring-buffer size
+  # increase if processing very long sentences
+  buffer_duration: 10s
+  # `gain_smooth`: don't change it.
+  # it tweaks the reactivity of the audio gain EMA for y-shifting the audio input.
+  gain_smooth: 0.97
+  # `context_prefix`: duration of silence preceding speech activity that is fed to the ASR.
+  # increase gently (probably up to ~500ms) if you are 'missing the start' of some words
+  context_prefix: 150ms
+
+# HTTP server config
+http:
+  listen: ':8080' # all ifaces, TCP 8080
+```
+
+See the [official flasr tutorial](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr/tutorial) for testing different models, finetuning, etc.
+
+There is also [the official flashlight documentation](https://github.com/facebookresearch/flashlight/tree/master/flashlight/app/asr).
 
 ---
 
@@ -180,31 +235,50 @@ Also see the [official flasr tutorial](https://github.com/facebookresearch/flash
 > **IMPORTANT**: While the server was made to support concurrent users, I haven't tested the current code
 > in such use case, and I highly doubt that it will work as expected.
 
-```json
-// new connection begins
-// ...
+```js
+// NOTE: this code section is read from top to bottom.
 
+// new connection begins
 // server sends text:
 { "event": "status_changed", "result": false, "message": "..." }
 
 // status_changed is false => wait for next event
-// ...
+// [...]
 
 // server sends text:
 { "event": "status_changed", "result": true, "message": "..." }
 
 // client can now write audio data in a sequence of binary messages
-// status_changed cannot become false anymore. That easy.
+// status_changed cannot become false anymore, no need to keep track of it
+
+// send some media file containing at least an audio stream (like the output of a microphone capture device,
+// or the contents of a video/audio file.
+// audio can be split into multiple arbitrary-sized binary messages in order to stream the content
+// of the request, and get results while you keep sending the following chunk(s)
+// [insert audio data here, as *BINARY* message(s), NOT TEXT]
+
+// wait for predictions
+// [...]
+
+// server sends a prediction
+{"event": "prediction", "result": { "input_file": "/tmp/1.wav", "text": "hello github" } }
+// [...]
+// server sends another prediction
+{"event": "prediction", "result": { "input_file": "/tmp/2.wav", "text": "you get the idea" } }
 ```
 
 - The server always sends JSON-encoded text messages ;
 - The server expects to receive only binary messages ;
+- Connection is full-duplex: you can send audio data while receiving predictions ;
 - The binary messages contain the ordered audio stream, such as the content an MP3-encoded file ;
 - The client is allowed to stop/resume sending frames at any point after `status_changed` becomes `true` ;
 - Sending aberrant volumes of data over an extended period of time will cause the server to fall behind
   and discard oldest audio data ;
 - You can feed it anything that ffmpeg accepts as input audio stream ;
-- Make sure to include the stream and codec format headers whenever possible.
+- Make sure to include the stream and codec format headers whenever possible ;
+- The last audio blob should end with ~300ms of silence, in order to be fully processed and not hang
+  in the server's audio buffer forever. This is due to the lack of client-server syncing. I'm fine with
+  this limitation as of now.
 
 ---
 
@@ -234,7 +308,7 @@ with long sentences. Even worse: longer inputs are more complex to process, over
 a poor real-time experience. And yeah, python.
 
 Neuron activates: split the audio file in shorter audio files. Brain oofed a couple of hours later when
-I realized the complexity of driving multiple ffmpeg processes and having no control on what what going, or
+I realized the complexity of driving multiple ffmpeg processes and having no control on what was going on, or
 how to improve the results.
 
 Second impulse: rewrite the entire proto in go, but keep ffmpeg for transcoding into WAV/PCM.
